@@ -5,9 +5,9 @@ include::_attributes.adoc[]
 == Skaffold a Spring Boot
 
 The first thing we need is a Spring Boot application.
-To skaffold it, we use the Spring Initilizr web page located at https://start.spring.io/.
+To skaffold it, we use the Spring Initilizr web page located at https://start.spring.io[spting initilizr, window=_blank].
 
-In the page, fill the form with the values shown in <<start-spring>>, keeping an eye to add Spring Web, Resilience4J and Spring Boot Actuator.  
+In the page, fill the form with the values shown in <<start-spring>>, keeping an eye to add Spring Web, Resilience4J and Spring Boot Actuator.
 
 [id=start-spring]
 .Spring Initializr
@@ -15,7 +15,10 @@ image::start-spring.png[]
 
 Push the `Generate` button which will download the source code.
 
-Unzip the downloaded file and open the project in your favourite IDE:
+TIP: Click on https://start.spring.io/#!type=maven-project&language=java&platformVersion=3.2.2&packaging=jar&jvmVersion=17&groupId=org.acme&artifactId=hellokubernetes&name=hellokubernetes&description=Demo%20project%20for%20Spring%20Boot&packageName=org.acme.hellokubernetes&dependencies=web,actuator,cloud-resilience4j[Generate Spring-Boot app, window=_blank] to get all done for you.
+
+
+ Downloaded and Unzip the project:
 
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
@@ -23,6 +26,71 @@ Unzip the downloaded file and open the project in your favourite IDE:
 unzip hello-kubernetes.zip
 cd hello-kubernetes
 ----
+
+Because we are going to use OpenShift DevSpaces, You need to init a git repo in the local project folder and then commit it to a git repo.
+
+IMPORTANT: in case you can't have your own git repository, A public repository is already created with the project boilerplate code
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+https://github.com/wael2000/hellokubernetes[window=_blank]
+----
+
+use the following in case you want to create your own git repo
+
+[.console-input]
+[source, bash,subs="+macros,+attributes"]
+----
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin $REPO_URL
+git push -u origin main
+----
+
+Once you have the repo (one of the above options), Then click on Below URL to access DevSpaces.
+
+
+https://devspaces.{domain}/dashboard/[DevSpaces Dashboard1, window=_blank]
+
+https://devspaces.apps.cluster-nbdqm.dynamic.redhatworkshops.io/dashboard/[DevSpaces Dashboard, window=_blank]
+
+Login with OpenShift
+
+image::create-01.png[]
+
+use following credentials.
+
+[.console-output]
+[source,subs="+macros,+attributes"]
+----
+USERNAME: user1
+PASSWORD: ZKdFvi61IGgbZzh6
+----
+
+image::create-02.png[]
+
+
+First time you will need to Authorize Access, Click on "Allow Selected Permissions"
+
+image::create-03.png[]
+
+Create Workspace and provide the Git Repo URL *.
+
+image::create-04.png[]
+
+Once created, you will get your IDE with the project preloaded, Go ahead and open a new terminal.
+
+image::create-05.png[]
+
+Use this terminal to execute all commands required through out this workshop.
+
+image::create-06.png[]
+
+
+== Let's start coding
 
 In your IDE, create a new class named `HelloController` in `org.acme.hellokubernetes` package:
 
@@ -36,7 +104,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class HelloController {
-    
+
     @GetMapping("/hello")
     String hello() {
       return "Hello World";
@@ -55,7 +123,7 @@ We can build the project and run it:
 ----
 ./mvnw package -DskipTests
 
-java -jar target/hello-kubernetes-0.0.1-SNAPSHOT.jar
+java -jar target/hellokubernetes-0.0.1-SNAPSHOT.jar
 ----
 
 [.console-input]

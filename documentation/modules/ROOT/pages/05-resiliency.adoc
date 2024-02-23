@@ -8,6 +8,21 @@ When we created the project, we already set the circuit breaker dependencies, so
 
 Let's modify the previous application so the hello message is retrieved from an external service.
 
+
+=== Deploy External Service
+
+Let's deploy the external service to our Kubernetes cluster and expose the service so it's accessible from localhost.
+This service returns a message when we query the default path.
+One of the important aspect of this service is a sleep call of three seconds, so every time we send a request to the service, it takes three seconds to return the response.
+
+:containername: quay.io/rhdevelopers/istio-tutorial-recommendation:v2.2-timeout
+
+include::partial$deploy_kube.adoc[]
+
+:!containername:
+
+IMPORTANT: we will use the route HOST/PORT (URL) in the RestTemplate Object below
+
 [#restclient]
 == Rest Client
 
@@ -27,18 +42,28 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class MessageService {
-    
+
     public String getMessage() {
         System.out.println("Get Message Remote call");
 
         final RestTemplate messageServiceGateway = new RestTemplate();
-        return messageServiceGateway.getForEntity("http://localhost:8090", String.class).getBody();
+        return messageServiceGateway.getForEntity("http://externalroute-demo.apps.cluster-nbdqm.dynamic.redhatworkshops.io", String.class).getBody();
     }
 
 }
 ----
 
 And add the following lines at the `HelloController.java` class to use the previous class to make requests to an external service:
+
+add Autowired import
+[.console-input]
+[source, java,subs="+macros,+attributes"]
+.org.acme.hellokubernetes.HelloController.java
+----
+import org.springframework.beans.factory.annotation.Autowired;
+----
+
+Then add the following
 
 [.console-input]
 [source, java,subs="+macros,+attributes"]
@@ -53,21 +78,9 @@ String hello() {
 }
 ----
 
-=== Deploy External Service
-
-Let's deploy the external service to our Kubernetes cluster and expose the service so it's accessible from localhost.
-This service returns a message when we query the default path. 
-One of the important aspect of this service is a sleep call of three seconds, so every time we send a request to the service, it takes three seconds to return the response.
-
-:containername: quay.io/rhdevelopers/istio-tutorial-recommendation:v2.2-timeout
-
-include::partial$deploy_kube.adoc[]
-
-:!containername:
-
 === Access the Service
 
-Let's deploy the Spring Boot application:
+Let's run the Spring Boot application:
 
 include::partial$package_run.adoc[]
 
@@ -76,7 +89,7 @@ Then curl the service, the response is sent back after 3 seconds:
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/hello
+BASE_URL/hello
 ----
 
 [.console-output]
@@ -102,11 +115,11 @@ Usually when we're designing an application, if an external communication takes 
 
 Let's configure Spring Boot to start using resiliency4j and add a timeout to the code that is accessing the external service.
 
-Open `HelloKubernetesApplication.java` file and add the following method to configure resiliency4J factory to use timeout strategy configured in one second .
+Open `HellokubernetesApplication.java` file and add the following method to configure resiliency4J factory to use timeout strategy configured in one second .
 
 [.console-input]
 [source, java]
-.org.acme.hellokubernetes.HelloKubernetesApplication.java
+.org.acme.hellokubernetes.HellokubernetesApplication.java
 ----
 package org.acme.hellokubernetes;
 
@@ -123,7 +136,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 
 @SpringBootApplication
-public class HelloKubernetesApplication {
+public class HellokubernetesApplication {
 
 	@Bean
 	public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() { // <1>
@@ -134,7 +147,7 @@ public class HelloKubernetesApplication {
 	}
 
 	public static void main(String[] args) {
-		SpringApplication.run(HelloKubernetesApplication.class, args);
+		SpringApplication.run(HellokubernetesApplication.class, args);
 	}
 
 }
@@ -166,7 +179,7 @@ import io.micrometer.core.instrument.Tags;
 
 @RestController
 public class HelloController {
-    
+
     private CircuitBreaker messageCircuitBreaker; // <1>
 
     private Set<String> names = new HashSet<>();
@@ -198,7 +211,7 @@ public class HelloController {
 <3> Creates a circuit breaker instance for the message service.
 <4> Wrap the call.
 
-Let's deploy the Spring Boot application:
+Let's run the Spring Boot application:
 
 include::partial$package_run.adoc[]
 
@@ -207,7 +220,7 @@ Then curl the service, the response is sent back after 1 second with an exceptio
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/hello
+BASE_URL/hello
 ----
 
 [.console-output]
@@ -240,15 +253,15 @@ Open `HelloController.java` file and change `hello()` method:
 ----
 @GetMapping("/hello")
 String hello() {
-    return this.messageCircuitBreaker.run(() -> 
+    return this.messageCircuitBreaker.run(() ->
         "This is Spring calling a " + messageService.getMessage()
-        , throwable -> "Default" // <1> 
+        , throwable -> "Default" // <1>
     );
 }
 ----
 <1> Fallback method. In this case a static value is provided.
 
-Let's deploy the Spring Boot application:
+Let's run the Spring Boot application:
 
 include::partial$package_run.adoc[]
 
@@ -257,7 +270,7 @@ Then access the endpoint:
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl localhost:8080/hello
+BASE_URL/hello
 ----
 
 The output is the value provided in the fallback part.
@@ -276,11 +289,11 @@ We can also use http://martinfowler.com/bliki/CircuitBreaker.html[Circuit Breake
 To make the `RestTemplate` fail, let's stop the external service by stopping the `port-forward` process.
 Move to the terminal where `kubectl port-forward` was run and push kbd:[Ctrl+C] to stop it.
 
-Open `HelloKubernetesApplication.java` file and configure circuit breaker:
+Open `HellokubernetesApplication.java` file and configure circuit breaker:
 
 [.console-input]
 [source, java,subs="+macros,+attributes"]
-.org.acme.hellokubernetes.HelloKubernetesApplication.java
+.org.acme.hellokubernetes.HellokubernetesApplication.java
 ----
 package org.acme.hellokubernetes;
 
@@ -297,21 +310,21 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 
 @SpringBootApplication
-public class HelloKubernetesApplication {
+public class HellokubernetesApplication {
 
 	@Bean
 	public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() {
     return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
             .circuitBreakerConfig(CircuitBreakerConfig.custom() // <1>
                                     .failureRateThreshold(50) // <2>
-                                    .ringBufferSizeInClosedState(5) // <3>
+                                    .slidingWindow(5, 5, CircuitBreakerConfig.SlidingWindowType.COUNT_BASED) // <3>
                                     .build()
                                 )
             .build());
 	}
 
 	public static void main(String[] args) {
-		SpringApplication.run(HelloKubernetesApplication.class, args);
+		SpringApplication.run(HellokubernetesApplication.class, args);
 	}
 
 }
@@ -320,7 +333,7 @@ public class HelloKubernetesApplication {
 <2> Rate threshold to 50% of calls.
 <3> Configures the size of the sliding window.
 
-Let's deploy the Spring Boot application:
+Let's run the Spring Boot application:
 
 include::partial$package_run.adoc[]
 
@@ -330,7 +343,7 @@ And run the following command in a terminal:
 [source, bash,subs="+macros,+attributes"]
 ----
 for i in {1..10}; do
-curl localhost:8080/hello
+curl BASE_URL/hello
 done
 ----
 
@@ -380,11 +393,11 @@ Open `pom.xml` file and register the following dependencies:
 </dependency>
 ----
 
-To enable retries, annotate the `HelloKubernetesApplication.java` wfile with `@EnableRetry` annotation:
+To enable retries, annotate the `HellokubernetesApplication.java` wfile with `@EnableRetry` annotation:
 
 [.console-input]
 [source, java,subs="+macros,+attributes"]
-.org.acme.hellokubernetes.HelloKubernetesApplication.java
+.org.acme.hellokubernetes.HellokubernetesApplication.java
 ----
 @org.springframework.retry.annotation.EnableRetry
 @SpringBootApplication
@@ -415,7 +428,7 @@ import io.micrometer.core.instrument.Tags;
 
 @RestController
 public class HelloController {
-    
+
     private CircuitBreaker messageCircuitBreaker;
 
     private Set<String> names = new HashSet<>();
@@ -430,7 +443,7 @@ public class HelloController {
 
     @GetMapping("/hello")
     String hello() {
-      return this.messageCircuitBreaker.run(() -> 
+      return this.messageCircuitBreaker.run(() ->
           "This is Spring calling a " + messageService.getMessage());
     }
 
@@ -454,7 +467,7 @@ public class HelloController {
 <2> Executes four retries.
 <3> With an sleep of 1 second between retries.
 
-Let's deploy the Spring Boot application:
+Let's run the Spring Boot application:
 
 include::partial$package_run.adoc[]
 
@@ -463,7 +476,7 @@ Then access the created endpoint:
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl localhost:8080/hello/error
+curl BASE_URL/hello/error
 ----
 
 Before the error is returned, there is an sleep of 4 seconds (1 second for each retry).

@@ -1,2 +1,6 @@
-:experimental:
+:experimental: true
 :source-highlighter: highlightjs
+
+:domain: $DOMAIN
+:username: %USERNAME%
+:password: %PASSWORD%

@@ -2,7 +2,7 @@
 include::_attributes.adoc[]
 
 Spring Boot includes a number of additional features in the form of actuators.
-Some of these featuresbare health checks, tracing or monitoring. 
+Some of these featuresbare health checks, tracing or monitoring.
 Let's explore some of them:
 
 [#heatlhcheck]
@@ -20,12 +20,19 @@ Some of them are generic and others are specific to a technology. To mention a f
 
 Sending a request to `/actuator/health` endpoint returns an agrgegated result of all registered health indicators.
 
-include::partial$package_run.adoc[]
+Run the application
 
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/health
+./mvnw spring-boot:run -DskipTests
+----
+
+Access the following URL to check the health
+[.console-input]
+[source, bash,subs="+macros,+attributes"]
+----
+BASE_URL/actuator/health
 ----
 
 [.console-output]
@@ -56,11 +63,11 @@ public class LuckyHealthIndicator implements HealthIndicator {
     @Override
     public Health health() {
         final LocalTime currentTime = LocalTime.now();
-        final Health.Builder healthBuilder = currentTime.getMinute() % 2 == 0 ? 
-                                Health.up() 
-                                : 
+        final Health.Builder healthBuilder = currentTime.getMinute() % 2 == 0 ?
+                                Health.up()
+                                :
                                 Health.down().withDetail("time", currentTime);
-        
+
         return healthBuilder.build();
     }
 
@@ -74,32 +81,24 @@ Now depending on the minute you do the request, you may receive an `UP` or `DOWN
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/health -vv
+BASE_URL/actuator/health
 ----
 
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
-< HTTP/1.1 200
-< Content-Type: application/vnd.spring-boot.actuator.v3+json
-< Transfer-Encoding: chunked
-< Date: Thu, 20 May 2021 11:38:32 GMT
 {"status":"DOWN"}
 ----
 
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/health -vv
+BASE_URL/actuator/health
 ----
 
 [.console-output]
 [source,bash,subs="+macros,+attributes"]
 ----
-< HTTP/1.1 503
-< Content-Type: application/vnd.spring-boot.actuator.v3+json
-< Transfer-Encoding: chunked
-< Date: Thu, 20 May 2021 11:39:04 GMT
 {"status":"UP"}
 ----
 
@@ -120,7 +119,7 @@ include::partial$package_run.adoc[]
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/health
+BASE_URL/actuator/health
 ----
 
 The output contains some details about all registered health indicators:
@@ -137,7 +136,7 @@ For example, in the case of `LuckyHealthIndicator`, the name of the health indic
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/health/lucky
+BASE_URL/actuator/health/lucky
 ----
 
 [.console-output]
@@ -186,7 +185,7 @@ Now, two new endpoints related to monitoring are available:
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/metrics
+BASE_URL/actuator/metrics
 ----
 
 Sends the current monitoring parameters:
@@ -202,7 +201,7 @@ To consume the metrics, we use another endpoint:
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl http://localhost:8080/actuator/prometheus
+BASE_URL/actuator/prometheus
 ----
 
 And the metrics output is in the Prometheus format:
@@ -254,7 +253,7 @@ import io.micrometer.core.instrument.Tags;
 
 @RestController
 public class HelloController {
-    
+
     private Set<String> names = new HashSet<>();
 
     public HelloController(MeterRegistry registry) { // <1>
@@ -285,9 +284,9 @@ Then make a request to `/hello/Alex` and then get the metrics (optionally filter
 [.console-input]
 [source, bash,subs="+macros,+attributes"]
 ----
-curl localhost:8080/hello/Alex
+BASE_URL/hello/Alex
 
-curl http://localhost:8080/actuator/prometheus | grep names.size
+BASE_URL/actuator/prometheus
 ----
 
 And metric is updated.

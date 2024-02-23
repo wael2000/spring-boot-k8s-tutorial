@@ -19,10 +19,75 @@ NAME                    READY   STATUS    RESTARTS   AGE
 externalservice-jd6jk   1/1     Running   0          18s
 ----
 
-Then port forward the service so it's accessible from localhost.
+Then create service object
 
 [.console-input]
 [source,bash, subs="+macros,+attributes"]
 ----
-kubectl port-forward -n default externalservice-jd6jk  8090:8080
+kubectl apply -f - <<EOF
+kind: Service
+apiVersion: v1
+metadata:
+  name: externalservice
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+  selector:
+    app: externalservice
+EOF
+----
+
+find created service
+
+[.console-input]
+[source,bash, subs="+macros,+attributes"]
+----
+kubectl get svc
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+externalservice   ClusterIP   172.31.76.215   <none>        8080/TCP   20s
+----
+
+expose the service (create OpenShift route)
+
+[.console-input]
+[source,bash, subs="+macros,+attributes"]
+----
+kubectl apply -f - <<EOF
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: externalroute
+spec:
+  to:
+    kind: Service
+    name: externalservice
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+EOF
+----
+
+Find the Route URL
+
+[.console-input]
+[source,bash, subs="+macros,+attributes"]
+----
+kubectl get route
+----
+
+[.console-output]
+[source,bash,subs="+macros,+attributes"]
+----
+NAME                    HOST/PORT                                                          PATH   SERVICES          PORT   TERMINATION   WILDCARD
+externalroute           externalroute-demo.apps.cluster-nbdqm.dynamic.redhatworkshops.io          externalservice   http                 None
 ----
